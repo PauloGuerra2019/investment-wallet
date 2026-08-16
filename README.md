@@ -184,3 +184,6 @@ Por fim, o desafio mostrou como integrar diferentes camadas:
                                   └─────────────┘
 
 Esse projeto consolidou conhecimentos de Back-End, banco de dados, autenticação, segurança, HTML server-side, APIs e arquitetura de aplicações em Rust.
+## Licença
+
+Este projeto está licenciado sob a [MIT License](LICENSE).
