@@ -1,189 +1,135 @@
-# investment-wallet
-O que o projeto faz
+# Atlas Investment Wallet
 
-O Investment Wallet é uma aplicação Fullstack desenvolvida em Rust para gerenciamento de uma carteira de investimentos.
+Carteira de investimentos fullstack construída em Rust. O Atlas permite criar uma conta, registrar compras e vendas e acompanhar uma visão consolidada das posições em uma interface web renderizada no servidor.
 
-A aplicação permite que usuários:
+## O que está incluído
 
-Criem uma conta e façam login;
-Tenham suas sessões protegidas;
-Registrem operações de compra e venda;
-Consultem suas movimentações;
-Acompanhem seus ativos e posições;
-Armazenem os dados de forma persistente no PostgreSQL;
-Acessem uma interface web renderizada no servidor com Askama.
+- Cadastro, login e logout
+- Senhas protegidas com Argon2
+- Sessões persistidas no PostgreSQL com cookie HttpOnly
+- Isolamento das movimentações por usuário
+- Registro de operações de compra e venda
+- Dashboard com total investido, ativos acompanhados e histórico
+- Migrations executadas automaticamente pelo SQLx
+- Valores financeiros representados com `Decimal`
 
-A arquitetura foi pensada para separar autenticação, regras de negócio, persistência e apresentação.
+## Pré-requisitos
 
-Como executar a aplicação
+- [Rust e Cargo](https://www.rust-lang.org/tools/install)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- Git, caso o projeto seja clonado
 
-Pré-requisitos:
+## Instalação no Windows
 
-Rust e Cargo
-Docker e Docker Compose
-PostgreSQL, caso não utilize o ambiente Docker
+O projeto extraído deste ZIP pode conter uma pasta interna com o mesmo nome. Use sempre a pasta que contém diretamente `Cargo.toml` e `docker-compose.yml`:
 
-Clone o projeto:
+```powershell
+cd "C:\Users\Pauli\Downloads\investment-wallet-main\investment-wallet-main"
+```
 
-git clone https://github.com/PauloGuerra2019/investment-wallet.git
-cd investment-wallet
+Crie o arquivo de ambiente a partir do exemplo:
 
-Configure as variáveis de ambiente:
+```powershell
+Copy-Item .env.example .env
+```
 
+O `.env` deve conter:
+
+```env
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/investment_wallet
-RUST_LOG=info
+RUST_LOG=investment_wallet=debug,tower_http=debug
+```
 
-Suba o PostgreSQL:
+### Corrigir o erro `docker-credential-desktop`
 
+Se o Docker exibir `error getting credentials` ou `docker-credential-desktop executable file not found`, remova o credential store quebrado da configuração local. O comando abaixo cria um backup antes da alteração:
+
+```powershell
+$configPath = Join-Path $HOME ".docker\config.json"
+Copy-Item $configPath "$configPath.bak" -Force
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
+$config.PSObject.Properties.Remove("credsStore")
+$config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding utf8
+```
+
+Se o Docker reclamar de BOM/encoding depois disso, regrave o arquivo assim:
+
+```powershell
+$json = Get-Content $configPath -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 10
+[IO.File]::WriteAllText($configPath, $json, [Text.UTF8Encoding]::new($false))
+```
+
+## Executar
+
+Inicie o PostgreSQL:
+
+```powershell
 docker compose up -d postgres
+```
 
-Execute a aplicação:
+Confira o serviço:
 
+```powershell
+docker compose ps
+```
+
+Inicie a aplicação:
+
+```powershell
 cargo run
+```
 
-A aplicação ficará disponível em:
+Abra http://localhost:3000. Na primeira visita, crie uma conta e depois registre suas operações.
 
-http://localhost:3000
+As migrations em `migrations/` são aplicadas automaticamente quando o servidor inicia.
 
-As migrations do banco são executadas automaticamente durante a inicialização.
+## Comandos úteis
 
-Tecnologias utilizadas
-Tecnologia	Utilização
-Rust	Linguagem principal
-Axum	Framework HTTP/API
-Tokio	Runtime assíncrono
-PostgreSQL	Banco de dados
-SQLx	Acesso ao banco e migrations
-Askama	Renderização de páginas HTML
-Argon2	Hash seguro das senhas
-Serde	Serialização e desserialização
-Tower HTTP	Middleware HTTP e arquivos estáticos
-Tracing	Logs estruturados
-Docker	Ambiente de execução
-GitHub	Versionamento e colaboração
-Qual melhoria foi implementada
-
-A principal melhoria implementada foi a autenticação completa de usuários.
-
-A aplicação inicialmente permitia trabalhar com movimentações sem estabelecer uma identidade para o usuário. A melhoria introduziu:
-
-Tabela de usuários;
-Cadastro;
-Login;
-Logout;
-Hash de senha utilizando Argon2;
-Sessões persistidas no PostgreSQL;
-Cookies HttpOnly;
-Expiração das sessões;
-Middleware de autenticação;
-Associação das movimentações ao usuário autenticado;
-Proteção das informações da carteira.
-
-Isso permite que cada usuário tenha acesso somente aos próprios dados.
-
-Além disso, a aplicação utiliza tipos decimais para valores financeiros, evitando trabalhar com f64 para cálculos monetários.
-
-Como testar
-
-Para verificar se o projeto está funcionando:
-
+```powershell
 cargo check
-
-Executar os testes:
-
 cargo test
-
-Verificar problemas apontados pelo Clippy:
-
 cargo clippy --all-targets --all-features -- -D warnings
-
-Executar a aplicação:
-
 cargo run
+```
 
-Depois acessar:
+Para parar somente o banco:
 
-http://localhost:3000
+```powershell
+docker compose stop postgres
+```
 
-O fluxo básico de teste é:
+Para parar e remover o container, preservando os dados do volume:
 
-Cadastro
-   ↓
-Login
-   ↓
-Dashboard
-   ↓
-Adicionar compra
-   ↓
-Consultar movimentação
-   ↓
-Logout
-   ↓
-Tentar acessar área protegida
-   ↓
-Redirecionamento para login
-O que aprendi durante o desafio
+```powershell
+docker compose down
+```
 
-Durante o desenvolvimento do projeto, os principais aprendizados foram relacionados à construção de uma aplicação completa utilizando Rust.
+Para apagar também os dados persistidos do PostgreSQL:
 
-Rust no desenvolvimento web
+```powershell
+docker compose down -v
+```
 
-Aprendi a estruturar uma aplicação web utilizando Axum e Tokio, trabalhando com programação assíncrona e o sistema de tipos do Rust.
+## Arquitetura
 
-Persistência de dados
+- **Axum**: rotas HTTP e handlers
+- **Tokio**: runtime assíncrono
+- **SQLx + PostgreSQL**: persistência e migrations
+- **Askama**: renderização server-side dos templates
+- **Argon2**: hash seguro de senhas
+- **Tower HTTP**: arquivos estáticos e tracing
 
-O projeto permitiu trabalhar com PostgreSQL através do SQLx, incluindo criação de tabelas, relacionamentos, índices e migrations.
+## Estrutura principal
 
-Autenticação e segurança
+```text
+src/main.rs              Rotas, autenticação e regras da aplicação
+templates/               Templates HTML Askama
+static/app.css           Estilos da interface
+migrations/              Schema inicial e autenticação
+docker-compose.yml       PostgreSQL para desenvolvimento
+.env.example              Variáveis de ambiente de referência
+```
 
-Um dos principais aprendizados foi entender que autenticação não envolve apenas criar uma tela de login. É necessário trabalhar corretamente com:
-
-Hash de senhas;
-Sessões;
-Cookies;
-Expiração;
-Middleware;
-Autorização;
-Isolamento dos dados entre usuários.
-
-Server-side rendering
-
-O uso do Askama mostrou uma abordagem diferente das aplicações SPA tradicionais, permitindo gerar HTML no próprio backend utilizando templates fortemente integrados ao Rust.
-
-Modelagem financeira
-
-Também foi necessário considerar um ponto importante em aplicações financeiras: precisão numérica. Valores monetários não devem depender de operações com ponto flutuante sem controle adequado.
-
-Arquitetura Fullstack
-
-Por fim, o desafio mostrou como integrar diferentes camadas:
-
-                    ┌──────────────┐
-                    │    Browser   │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │     Axum     │
-                    └──────┬───────┘
-                           │
-             ┌─────────────┴─────────────┐
-             ▼                           ▼
-      ┌─────────────┐             ┌─────────────┐
-      │   Askama    │             │     API     │
-      └─────────────┘             └──────┬──────┘
-                                         │
-                                         ▼
-                                  ┌─────────────┐
-                                  │    SQLx     │
-                                  └──────┬──────┘
-                                         │
-                                         ▼
-                                  ┌─────────────┐
-                                  │ PostgreSQL  │
-                                  └─────────────┘
-
-Esse projeto consolidou conhecimentos de Back-End, banco de dados, autenticação, segurança, HTML server-side, APIs e arquitetura de aplicações em Rust.
 ## Licença
 
 Este projeto está licenciado sob a [MIT License](LICENSE).
