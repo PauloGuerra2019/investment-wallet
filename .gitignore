@@ -1,0 +1,11 @@
+# Rust build output
+target/
+
+# Local environment and secrets
+.env
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
